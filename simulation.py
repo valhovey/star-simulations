@@ -67,8 +67,9 @@ class Pupil:
         pixel_scale = self.get_pupil_pixel_scale()
         l = self.radius.value
         o = offset.value
+        print(f"Length: {l}, Offset: {o}, Misalignment: {misalignment}")
         vanes = [
-                (0, o, l, o),
+                (0, o, l, o + misalignment),
                 (0, -o, -l, -o),
                 (o, 0, o, l),
                 (-o, 0, -o, -l),

@@ -13,17 +13,17 @@ frames = 200
 
 d_offset = support_offset_max / frames
 
-def gen_frame(i, support_offset):
+def gen_frame(i, support_offset, misalignment):
     pupil = sim.Pupil(aperture_radius, npix)
     pupil.add_secondary(secondary_radius)
-    pupil.add_offset_supports(support_width, support_offset, np.pi/8)
+    pupil.add_offset_supports(support_width, support_offset, misalignment)
 
     # monochrome
     # osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=400)
     # rgb_image = sim.simulate_psf([[sim.red_low], [sim.red_low], [sim.red_low]], osys)
 
     # rgb (oversampled)
-    osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=800)
+    osys = pupil.to_optical_system(arcsec_per_pixel=0.7, fov_pixels=800)
     rgb_image = sim.simulate_psf(sim.rgb, osys)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
@@ -43,7 +43,7 @@ def gen_frame(i, support_offset):
 
 if __name__ == "__main__":
     # Single shot
-    gen_frame(0, support_offset=0.010 * u.m)
+    gen_frame(0, support_offset=0.010 * u.m, misalignment=.001)
 
     # Animation
     # for i, support_offset in enumerate([0 + n * d_offset for n in range(frames)]):
