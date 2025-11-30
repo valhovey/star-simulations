@@ -17,23 +17,17 @@ def gen_frame(i, support_offset):
     pupil.add_secondary(secondary_radius)
     pupil.add_offset_supports(support_width, support_offset)
 
-    osys = pupil.to_optical_system(0.7)
+    # monochrome
+    # osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=400)
+    # rgb_image = sim.simulate_psf([[sim.red_low], [sim.red_low], [sim.red_low]], osys)
 
+    # rgb
+    osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=800)
     rgb_image = sim.simulate_psf(sim.rgb, osys)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
-    ax = axes[0]
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.imshow(
-        pupil.pupil,
-        origin='lower',
-        cmap='gray',
-        extent=[-aperture_radius.value, aperture_radius.value,
-                -aperture_radius.value, aperture_radius.value]
-    )
-    ax.set_title("Spider Shape")
+    pupil.display_on(axes[0])
 
     ax = axes[1]
     ax.imshow(rgb_image, origin='lower')

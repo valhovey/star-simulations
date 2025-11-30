@@ -46,6 +46,17 @@ class Pupil:
         osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=fov_pixels)
 
         return osys
+    
+    def display_on(self, axis):
+        axis.axis('off')
+        axis.imshow(
+            self.pupil,
+            origin='lower',
+            cmap='gray',
+            extent=[-self.radius.value, self.radius.value,
+                    -self.radius.value, self.radius.value]
+        )
+        axis.set_title("Spider Shape")
 
 red_high = 620e-9
 red_low = 700e-9
