@@ -8,10 +8,10 @@ from matplotlib.colors import LinearSegmentedColormap
 print("POPPY version:", poppy.__version__)
 
 npix = 1024
-aperture_radius = 0.1 * u.m
-secondary_radius = 0.03 * u.m
-support_width = 0.0015 * u.m
-support_offset_max = 0.02 * u.m
+aperture_radius = 0.01 * u.m
+secondary_radius = 0.003 * u.m
+support_width = 0.0005 * u.m
+support_offset_max = 0.0015 * u.m
 frames = 200
 
 d_offset = support_offset_max / frames
@@ -41,8 +41,8 @@ for i, support_offset in enumerate([0 + n * d_offset for n in range(frames)]):
     osys = OpticalSystem(pupil_diameter=2*aperture_radius)
     osys.add_pupil(array_pupil)
 
-    detector_pixelscale = 0.1 * u.arcsec / u.pixel  # arcsec per pixel
-    osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=512)
+    detector_pixelscale = 1.7 * u.arcsec / u.pixel  # arcsec per pixel
+    osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=800)
 
     colors = [
         np.arange(620e-9, 700e-9, 10e-9),
