@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import poppy
 from poppy import ArrayOpticalElement, OpticalSystem
 import astropy.units as u
-from matplotlib.colors import LinearSegmentedColormap
 
 npix = 1024
 aperture_radius = 0.01 * u.m

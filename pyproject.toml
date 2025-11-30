@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Simulations of different telescope apertures"
 readme = "readme.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "astropy>=7.2.0",
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.5",
+    "poppy>=1.1.2",
+]
