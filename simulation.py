@@ -47,10 +47,20 @@ class Pupil:
 
         return osys
 
+red_high = 620e-9
+red_low = 700e-9
+green_high = 480e-9
+green_low = 570e-9
+blue_high=420e-9
+blue_low=510e-9
+
+def spectrum(low, high, dwave=10e-9):
+    return np.arange(low, high, dwave)
+
 rgb = [
-    np.arange(620e-9, 700e-9, 10e-9),
-    np.arange(480*1e-9, 570*1e-9, 10*1e-9),
-    np.arange(420*1e-9, 510*1e-9, 10*1e-9),
+    spectrum(red_high, red_low),
+    spectrum(green_high, blue_low, 10*1e-9),
+    spectrum(blue_high, blue_low, 10*1e-9),
 ]
 
 def simulate_psf(colors, osys):

@@ -5,10 +5,10 @@ import simulation as sim
 from typing import cast
 
 npix = 1024
-aperture_radius = cast(u.Quantity, 0.01 * u.m)
-secondary_radius = cast(u.Quantity, 0.003 * u.m)
-support_width = cast(u.Quantity, 0.0005 * u.m)
-support_offset_max = cast(u.Quantity, 0.0015 * u.m)
+aperture_radius = cast(u.Quantity, 0.1 * u.m)
+secondary_radius = cast(u.Quantity, 0.03 * u.m)
+support_width = cast(u.Quantity, 0.0015 * u.m)
+support_offset_max = cast(u.Quantity, 0.00075 * u.m)
 frames = 200
 
 d_offset = support_offset_max / frames
