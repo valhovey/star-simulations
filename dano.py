@@ -10,7 +10,7 @@ npix = 512
 aperture_radius = 0.05 * u.m
 secondary_radius = 0.01 * u.m
 support_width = 0.002 * u.m
-support_offset = 0.003 * u.m
+support_offset = 0.000 * u.m
 
 x = np.linspace(-aperture_radius.value, aperture_radius.value, npix) * u.m
 y = np.linspace(-aperture_radius.value, aperture_radius.value, npix) * u.m
@@ -23,8 +23,8 @@ directions = [(0, xx, yy), (np.pi/2, yy, xx)]
 for (angle, left, up) in directions:
     x_rot = xx * np.cos(angle) + yy * np.sin(angle)
     centered = ((xx**2 + yy**2) <= aperture_radius**2)
-    l_mask = (np.abs(x_rot - support_offset) < support_width/2) & centered & (left > 0) & (up > 0)
-    r_mask = (np.abs(x_rot + support_offset) < support_width/2) & centered & (left < 0) & (up < 0)
+    l_mask = (np.abs(x_rot - support_offset) < support_width/2) & centered & (left > -support_width/2) & (up > 0)
+    r_mask = (np.abs(x_rot + support_offset) < support_width/2) & centered & (left < support_width/2) & (up < 0)
     pupil[l_mask | r_mask] = 0.0
 
 plt.figure(figsize=(6,6))
