@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import astropy.units as u
 import simulation as sim
+import numpy as np
 from typing import cast
 
 npix = 1024
@@ -15,13 +16,13 @@ d_offset = support_offset_max / frames
 def gen_frame(i, support_offset):
     pupil = sim.Pupil(aperture_radius, npix)
     pupil.add_secondary(secondary_radius)
-    pupil.add_offset_supports(support_width, support_offset)
+    pupil.add_offset_supports(support_width, support_offset, np.pi/8)
 
     # monochrome
     # osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=400)
     # rgb_image = sim.simulate_psf([[sim.red_low], [sim.red_low], [sim.red_low]], osys)
 
-    # rgb
+    # rgb (oversampled)
     osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=800)
     rgb_image = sim.simulate_psf(sim.rgb, osys)
 
@@ -42,7 +43,7 @@ def gen_frame(i, support_offset):
 
 if __name__ == "__main__":
     # Single shot
-    gen_frame(0, 0)
+    gen_frame(0, support_offset=0.010 * u.m)
 
     # Animation
     # for i, support_offset in enumerate([0 + n * d_offset for n in range(frames)]):

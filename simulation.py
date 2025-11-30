@@ -4,6 +4,43 @@ import astropy.units as u
 from dataclasses import dataclass
 from numpy.typing import NDArray
 from poppy import ArrayOpticalElement, OpticalSystem
+from typing import cast
+
+def meters_to_pixels(x, y, pixels, pixel_scale):
+    cx = pixels / 2
+    cy = pixels / 2
+    x_pix = cx + x / pixel_scale
+    y_pix = cy - y / pixel_scale
+
+    return x_pix, y_pix
+
+def draw_line_segment_on_image(img, x0, y0, x1, y1, width, pixel_scale):
+    pixels_y, pixels_x = img.shape
+
+    x0, y0 = meters_to_pixels(x0, y0, pixels_x, pixel_scale)
+    x1, y1 = meters_to_pixels(x1, y1, pixels_x, pixel_scale)
+    width = width / pixel_scale
+
+    x_min = max(int(min(x0, x1) - width // 2), 0)
+    x_max = min(int(max(x0, x1) + width // 2) + 1, pixels_x)
+    y_min = max(int(min(y0, y1) - width // 2), 0)
+    y_max = min(int(max(y0, y1) + width // 2) + 1, pixels_y)
+    
+    meshgrid_x, meshgrid_y = np.meshgrid(np.arange(x_min, x_max), np.arange(y_min, y_max))
+    
+    dx = x1 - x0
+    dy = y1 - y0
+    line_length = np.hypot(dx, dy)
+    
+    if line_length == 0:
+        dist = np.hypot(meshgrid_x - x0, meshgrid_y - y0)
+        mask = dist <= width / 2
+    else:
+        dist = np.abs(dy * meshgrid_x - dx * meshgrid_y + x1*y0 - y1*x0) / line_length
+        t = ((meshgrid_x - x0) * dx + (meshgrid_y - y0) * dy) / (line_length**2)
+        mask = (dist <= width / 2) & (t >= 0) & (t <= 1)
+    
+    img[y_min:y_max, x_min:x_max][mask] = 0.0
 
 @dataclass
 class Pupil:
@@ -20,17 +57,25 @@ class Pupil:
         self.xx, self.yy = np.meshgrid(x, x)
         self.pupil = ((self.xx**2 + self.yy**2) <= radius**2).astype(float)
 
+    def get_pupil_pixel_scale(self):
+        return cast(u.Quantity, 2*self.radius/(self.pixels * u.pixel))
+
     def add_secondary(self, radius):
         self.pupil *= ((self.xx**2 + self.yy**2) >= radius**2).astype(float)
 
-    def add_offset_supports(self, width: u.Quantity, offset: u.Quantity):
-        directions = [(0, self.xx, self.yy), (np.pi/2, self.yy, self.xx)]
-        for (angle, left, up) in directions:
-            x_rot = self.xx * np.cos(angle) + self.yy * np.sin(angle)
-            centered = ((self.xx**2 + self.yy**2) <= self.radius**2)
-            l_mask = (np.abs(x_rot - offset) < width/2) & centered & (left > -width/2) & (up > 0)
-            r_mask = (np.abs(x_rot + offset) < width/2) & centered & (left < width/2) & (up < 0)
-            self.pupil[l_mask | r_mask] = 0.0
+    def add_offset_supports(self, width: u.Quantity, offset: u.Quantity, misalignment=0.0):
+        pixel_scale = self.get_pupil_pixel_scale()
+        l = self.radius.value
+        o = offset.value
+        vanes = [
+                (0, o, l, o),
+                (0, -o, -l, -o),
+                (o, 0, o, l),
+                (-o, 0, -o, -l),
+        ]
+
+        for (x0, y0, x1, y1) in vanes:
+            draw_line_segment_on_image(self.pupil, x0, y0, x1, y1, width.value, pixel_scale.value)
 
     def to_optical_system(self, arcsec_per_pixel, fov_pixels=800):
         pixelscale = 2*self.radius/(self.pixels * u.pixel)
