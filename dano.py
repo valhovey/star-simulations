@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import poppy
 from poppy import ArrayOpticalElement, OpticalSystem
 import astropy.units as u
+from matplotlib.colors import LinearSegmentedColormap
 
 print("POPPY version:", poppy.__version__)
 
@@ -55,12 +56,37 @@ colors = [
     np.arange(420*1e-9, 510*1e-9, 10*1e-9),
 ]
 
+eps = 1e-12
+
+# Store log-scaled PSFs here
+log_psf_channels = []
+
 for wavelengths in colors:
     weights = np.ones_like(wavelengths)
     source = {"wavelengths": wavelengths, "weights": weights}
 
     psf = osys.calc_psf(source=source)
+    psf_data = psf[0].data
 
-    plt.figure(figsize=(6,6))
-    poppy.display_psf(psf, title="PSF with 4 Pairs of Parallel Supports")
-    plt.show()
+    # Safe log scale
+    log_psf = np.log10(psf_data + eps)
+    log_psf_channels.append(log_psf)
+
+# Convert list → stacked array, shape: (3, H, W)
+log_psf_channels = np.array(log_psf_channels)
+
+# Normalize each channel 0–1 for display
+# (Use same global min/max so colors are balanced)
+min_val = log_psf_channels.min()
+max_val = log_psf_channels.max()
+norm = (log_psf_channels - min_val) / (max_val - min_val)
+
+# Rearrange to (H, W, 3) for RGB
+rgb_image = np.moveaxis(norm, 0, -1)
+
+# Display
+plt.figure(figsize=(6,6), facecolor='black')
+plt.imshow(rgb_image, origin='lower')
+plt.axis('off')
+plt.tight_layout(pad=0)
+plt.show()
