@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import poppy
 from poppy import ArrayOpticalElement, OpticalSystem
 import astropy.units as u
-from matplotlib.colors import LinearSegmentedColormap
 
 print("POPPY version:", poppy.__version__)
 
