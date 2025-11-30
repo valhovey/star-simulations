@@ -47,14 +47,20 @@ osys = OpticalSystem(pupil_diameter=2*aperture_radius)
 osys.add_pupil(array_pupil)
 
 detector_pixelscale = (1.41 / 3) * u.arcsec / u.pixel  # arcsec per pixel
-osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=400)
+osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=500)
 
-wavelengths = np.arange(620e-9, 700e-9, 10e-9) * u.m
-weights = np.ones_like(wavelengths.value)
-source = {"wavelengths": wavelengths, "weights": weights}
+colors = [
+    np.arange(620e-9, 700e-9, 10e-9),
+    np.arange(480*1e-9, 570*1e-9, 10*1e-9),
+    np.arange(420*1e-9, 510*1e-9, 10*1e-9),
+]
 
-psf = osys.calc_psf(source=source)
+for wavelengths in colors:
+    weights = np.ones_like(wavelengths)
+    source = {"wavelengths": wavelengths, "weights": weights}
 
-plt.figure(figsize=(6,6))
-poppy.display_psf(psf, title="PSF with 4 Pairs of Parallel Supports")
-plt.show()
+    psf = osys.calc_psf(source=source)
+
+    plt.figure(figsize=(6,6))
+    poppy.display_psf(psf, title="PSF with 4 Pairs of Parallel Supports")
+    plt.show()
