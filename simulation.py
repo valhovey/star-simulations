@@ -28,8 +28,8 @@ class Pupil:
         for (angle, left, up) in directions:
             x_rot = self.xx * np.cos(angle) + self.yy * np.sin(angle)
             centered = ((self.xx**2 + self.yy**2) <= self.radius**2)
-            l_mask = (np.abs(x_rot - offset) < offset/2) & centered & (left > -width/2) & (up > 0)
-            r_mask = (np.abs(x_rot + offset) < offset/2) & centered & (left < width/2) & (up < 0)
+            l_mask = (np.abs(x_rot - offset) < width/2) & centered & (left > -width/2) & (up > 0)
+            r_mask = (np.abs(x_rot + offset) < width/2) & centered & (left < width/2) & (up < 0)
             self.pupil[l_mask | r_mask] = 0.0
 
     def to_optical_system(self, arcsec_per_pixel, fov_pixels=800):
