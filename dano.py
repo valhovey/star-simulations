@@ -6,14 +6,12 @@ import astropy.units as u
 
 print("POPPY version:", poppy.__version__)
 
-# --- Pupil parameters ---
 npix = 512
 aperture_radius = 0.05 * u.m
 secondary_radius = 0.01 * u.m
 support_width = 0.002 * u.m
 support_offset = 0.003 * u.m
 
-# --- Create pupil grid ---
 x = np.linspace(-aperture_radius.value, aperture_radius.value, npix) * u.m
 y = np.linspace(-aperture_radius.value, aperture_radius.value, npix) * u.m
 xx, yy = np.meshgrid(x, y)
@@ -29,7 +27,6 @@ for (angle, left, up) in directions:
     r_mask = (np.abs(x_rot + support_offset) < support_width/2) & centered & (left < 0) & (up < 0)
     pupil[l_mask | r_mask] = 0.0
 
-# --- Visualize pupil ---
 plt.figure(figsize=(6,6))
 plt.imshow(pupil, origin='lower', cmap='gray',
            extent=[-aperture_radius.value, aperture_radius.value,
@@ -40,30 +37,24 @@ plt.xlabel("x [m]")
 plt.ylabel("y [m]")
 plt.show()
 
-# # --- Convert to ArrayOpticalElement ---
-pixelscale = 2*aperture_radius/(npix * u.pixel)  # meters per pixel
+pixelscale = 2*aperture_radius/(npix * u.pixel)
 array_pupil = ArrayOpticalElement(
         transmission=pupil,
         pixelscale=pixelscale,
 )
 
-# --- Create optical system ---
 osys = OpticalSystem(pupil_diameter=2*aperture_radius)
 osys.add_pupil(array_pupil)
 
-# --- Add detector in angular units ---
 detector_pixelscale = (1.41 / 3) * u.arcsec / u.pixel  # arcsec per pixel
 osys.add_detector(pixelscale=detector_pixelscale, fov_pixels=400)
 
-# --- Define source wavelengths ---
 wavelengths = np.arange(620e-9, 700e-9, 10e-9) * u.m
 weights = np.ones_like(wavelengths.value)
 source = {"wavelengths": wavelengths, "weights": weights}
 
-# --- Compute PSF ---
 psf = osys.calc_psf(source=source)
 
-# --- Display PSF ---
 plt.figure(figsize=(6,6))
 poppy.display_psf(psf, title="PSF with 4 Pairs of Parallel Supports")
 plt.show()
