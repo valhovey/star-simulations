@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from numpy.typing import NDArray
 from poppy import ArrayOpticalElement, OpticalSystem
 from typing import cast
+from enum import Enum
+
+class StretchType(str, Enum):
+    LOG = "log"
+    AUTO = "auto"
 
 def meters_to_pixels(x, y, pixels, pixel_scale):
     cx = pixels / 2
@@ -69,14 +74,14 @@ class Pupil:
         o = offset.value
         print(f"Length: {l}, Offset: {o}, Misalignment: {misalignment}")
         vanes = [
-                (0, o, l, o + misalignment),
-                (0, -o, -l, -o),
-                (o, 0, o, l),
-                (-o, 0, -o, -l),
+                (0, o, l, o + misalignment, 0),
+                (0, -o, -l, -o, 0),
+                (o, 0, o, l, 0),
+                (-o, 0, -o, -l, 0),
         ]
 
-        for (x0, y0, x1, y1) in vanes:
-            draw_line_segment_on_image(self.pupil, x0, y0, x1, y1, width.value, pixel_scale.value)
+        for (x0, y0, x1, y1, thick_error) in vanes:
+            draw_line_segment_on_image(self.pupil, x0, y0, x1, y1, width.value * (1 + thick_error), pixel_scale.value)
 
     def to_optical_system(self, arcsec_per_pixel, fov_pixels=800):
         pixelscale = 2*self.radius/(self.pixels * u.pixel)
@@ -108,8 +113,8 @@ red_high = 620e-9
 red_low = 700e-9
 green_high = 480e-9
 green_low = 570e-9
-blue_high=420e-9
-blue_low=510e-9
+blue_high = 420e-9
+blue_low = 510e-9
 
 def spectrum(low, high, dwave=10e-9):
     return np.arange(low, high, dwave)
@@ -120,27 +125,91 @@ rgb = [
     spectrum(blue_high, blue_low, 10*1e-9),
 ]
 
-def simulate_psf(colors, osys):
+def auto_stretch(
+    img,
+    low_pct=0.25,
+    high_pct=99.9,
+    use_asinh=True,
+    asinh_a=10.0
+):
+    arr = np.asarray(img, float)
+    arr = np.clip(arr, 0, np.inf)
+
+    lo = np.percentile(arr, low_pct)
+    hi = np.percentile(arr, high_pct)
+    if hi <= lo:
+        hi = lo + 1e-12
+
+    norm = (arr - lo) / (hi - lo)
+    norm = np.clip(norm, 0, 1)
+
+    if use_asinh:
+        a = float(asinh_a)
+        norm = np.arcsinh(a * norm) / np.arcsinh(a)
+
+    return norm
+
+def simulate_psf(
+    colors,
+    osys,
+    stretch: StretchType = StretchType.AUTO
+):
+    """
+    Returns an (ny, nx, nch) array with values in [0,1].
+
+    - stretch == StretchType.LOG:
+        compute log10(psf + eps) per-channel, then normalize using the
+        global min/max across all channels (preserves color balance).
+    - stretch == StretchType.AUTO:
+        apply auto_stretch() per-channel (percentile + asinh).
+    """
     eps = 1e-12
+    channels = []
 
-    log_psf_channels = []
-
-    for wavelengths in colors:
-        source = {
+    if stretch == StretchType.LOG:
+        # compute log images for every channel first
+        log_channels = []
+        for wavelengths in colors:
+            source = {
                 "wavelengths": wavelengths,
                 "weights": np.ones_like(wavelengths)
-        }
+            }
+            psf = osys.calc_psf(source=source)
+            psf_data = psf[0].data.astype(float)
+            # ensure non-negative then take log10
+            psf_data = np.clip(psf_data, 0.0, np.inf)
+            log_img = np.log10(psf_data + eps)
+            log_channels.append(log_img)
 
-        psf = osys.calc_psf(source=source)
-        psf_data = psf[0].data
+        log_stack = np.stack(log_channels, axis=0)  # (nchan, ny, nx)
+        # global min/max across all channels (preserves color balance)
+        min_val = log_stack.min()
+        max_val = log_stack.max()
+        # avoid degenerate range
+        if max_val <= min_val + 1e-15:
+            max_val = min_val + 1.0
+        norm = (log_stack - min_val) / (max_val - min_val)
+        norm = np.clip(norm, 0.0, 1.0)
+        # move channel axis to last -> (ny, nx, nchan)
+        return np.moveaxis(norm, 0, -1)
 
-        log_psf = np.log10(psf_data + eps)
-        log_psf_channels.append(log_psf)
+    elif stretch == StretchType.AUTO:
+        for wavelengths in colors:
+            source = {
+                "wavelengths": wavelengths,
+                "weights": np.ones_like(wavelengths)
+            }
 
-    log_psf_channels = np.array(log_psf_channels)
+            psf = osys.calc_psf(source=source)
+            psf_data = psf[0].data.astype(float)
 
-    min_val = log_psf_channels.min()
-    max_val = log_psf_channels.max()
-    norm = (log_psf_channels - min_val) / (max_val - min_val)
+            # use the auto_stretch you already have (percentile + asinh)
+            stretched = auto_stretch(psf_data)
 
-    return np.moveaxis(norm, 0, -1)
+            channels.append(stretched)
+
+        stacked = np.stack(channels, axis=0)
+        return np.moveaxis(stacked, 0, -1)
+
+    else:
+        raise ValueError(f"Unknown stretch type: {stretch}")
