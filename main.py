@@ -9,6 +9,8 @@ aperture_radius = cast(u.Quantity, 0.1 * u.m)
 secondary_radius = cast(u.Quantity, 0.03 * u.m)
 support_width = cast(u.Quantity, 0.0015 * u.m)
 support_offset_max = cast(u.Quantity, 0.00075 * u.m)
+strut_width = cast(u.Quantity, 0.015 * u.m)
+strut_length = cast(u.Quantity, 0.01 * u.m)
 misalignment_max = 0.002
 frames = 200
 
@@ -18,7 +20,7 @@ d_misalignment = misalignment_max / frames
 def gen_frame(i, support_offset, misalignment):
     pupil = sim.Pupil(aperture_radius, npix)
     pupil.add_secondary(secondary_radius)
-    pupil.add_offset_supports(support_width, support_offset, misalignment)
+    pupil.add_offset_supports(support_width, support_offset, misalignment, strut_length, strut_width)
 
     # monochrome
     # osys = pupil.to_optical_system(arcsec_per_pixel=0.3, fov_pixels=400)

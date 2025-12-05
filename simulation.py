@@ -4,7 +4,7 @@ import astropy.units as u
 from dataclasses import dataclass
 from numpy.typing import NDArray
 from poppy import ArrayOpticalElement, OpticalSystem
-from typing import cast
+from typing import cast, Optional
 from enum import Enum
 
 class StretchType(str, Enum):
@@ -54,6 +54,7 @@ class Pupil:
     xx: NDArray[Any]
     yy: NDArray[Any]
     pupil: NDArray[Any]
+    secondaryRadius: u.Quantity
 
     def __init__(self, radius: u.Quantity, pixels: int):
         x = np.linspace(-radius.value, radius.value, pixels) * u.m
@@ -61,14 +62,23 @@ class Pupil:
         self.pixels = pixels
         self.xx, self.yy = np.meshgrid(x, x)
         self.pupil = ((self.xx**2 + self.yy**2) <= radius**2).astype(float)
+        self.secondaryRadius = 0 * u.m
 
     def get_pupil_pixel_scale(self):
         return cast(u.Quantity, 2*self.radius/(self.pixels * u.pixel))
 
     def add_secondary(self, radius):
         self.pupil *= ((self.xx**2 + self.yy**2) >= radius**2).astype(float)
+        self.secondaryRadius = radius
 
-    def add_offset_supports(self, width: u.Quantity, offset: u.Quantity, misalignment=0.0):
+    def add_offset_supports(
+            self,
+            width: u.Quantity,
+            offset: u.Quantity,
+            misalignment = 0.0,
+            strut_length: u.Quantity = 0.0 * u.m,
+            strut_width: u.Quantity = 0.0 * u.m
+            ):
         pixel_scale = self.get_pupil_pixel_scale()
         l = self.radius.value
         o = offset.value
@@ -81,7 +91,19 @@ class Pupil:
         ]
 
         for (x0, y0, x1, y1, thick_error) in vanes:
+            dx = x1 - x0
+            dy = y1 - y0
+            u = np.array([x0, y0], dtype=float)
+            v = np.array([x1, y1], dtype=float)
+            dv = np.array([dx, dy], dtype=float)
+            dv /= np.hypot(dx, dy)
+            strut1 = dv * strut_length.value
+            strut2 = dv * (strut_length.value * 0.5 + self.secondaryRadius.value)
+            [sx1, sy1] = v - strut1
+            [sx2, sy2] = u + strut2
             draw_line_segment_on_image(self.pupil, x0, y0, x1, y1, width.value * (1 + thick_error), pixel_scale.value)
+            draw_line_segment_on_image(self.pupil, x1, y1, sx1, sy1, strut_width.value, pixel_scale.value)
+            draw_line_segment_on_image(self.pupil, x0, y0, sx2, sy2, strut_width.value, pixel_scale.value)
 
     def to_optical_system(self, arcsec_per_pixel, fov_pixels=800):
         pixelscale = 2*self.radius/(self.pixels * u.pixel)
